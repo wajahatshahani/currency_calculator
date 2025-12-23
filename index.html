@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Currency Converter</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .converter-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--text-color);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+        }
+
+        .selection-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .select-box {
+            flex: 1;
+        }
+
+        .swap-icon {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            user-select: none;
+            transition: background 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .swap-icon:hover {
+            background: #e0e0e0;
+        }
+
+        .result-area {
+            text-align: center;
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        #exchangeRate {
+            font-size: 0.85rem;
+            color: #888;
+            margin: 0 0 5px 0;
+        }
+
+        #finalAmount {
+            font-size: 1.8rem;
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 400px) {
+            .selection-row {
+                flex-direction: column;
+                align-items: center;
+            }
+            .swap-icon {
+                transform: rotate(90deg);
+                margin: 10px 0;
+            }
+            .converter-card {
+                padding: 1.5rem;
+                border-radius: 0;
+                height: 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="converter-card">
+    <h2>Currency Converter</h2>
+    
+    <div class="input-group">
+        <label>Amount to Convert</label>
+        <input type="number" id="amount" value="100" min="0">
+    </div>
+
+    <div class="selection-row">
+        <div class="select-box">
+            <label>From</label>
+            <select id="fromCurrency"></select>
+        </div>
+        
+        <div class="swap-icon" id="swapBtn" title="Swap Currencies">⇄</div>
+        
+        <div class="select-box">
+            <label>To</label>
+            <select id="toCurrency"></select>
+        </div>
+    </div>
+
+    <div class="result-area">
+        <p id="exchangeRate">1 USD = 0.94 EUR</p>
+        <h3 id="finalAmount">--</h3>
+    </div>
+
+    <button id="convertBtn">Convert Now</button>
+</div>
+
+<script>
+    const amountInput = document.getElementById('amount');
+    const fromSelect = document.getElementById('fromCurrency');
+    const toSelect = document.getElementById('toCurrency');
+    const resultText = document.getElementById('finalAmount');
+    const rateText = document.getElementById('exchangeRate');
+    const convertBtn = document.getElementById('convertBtn');
+    const swapBtn = document.getElementById('swapBtn');
+
+    // Expanded list of currencies
+    const currencies = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY", "INR", "BRL", "ZAR"];
+
+    // Initialize dropdowns
+    function init() {
+        currencies.forEach(currency => {
+            const opt1 = document.createElement('option');
+            const opt2 = document.createElement('option');
+            opt1.value = opt2.value = currency;
+            opt1.textContent = opt2.textContent = currency;
+            fromSelect.appendChild(opt1);
+            toSelect.appendChild(opt2);
+        });
+
+        fromSelect.value = "USD";
+        toSelect.value = "EUR";
+        getExchangeRate(); // Initial fetch
+    }
+
+    async function getExchangeRate() {
+        const amount = amountInput.value;
+        const from = fromSelect.value;
+        const to = toSelect.value;
+
+        if (amount === "" || amount <= 0) return;
+
+        rateText.innerText = "Updating rates...";
+        
+        try {
+            // Using a reliable free exchange rate API
+            const response = await fetch(`https://open.er-api.com/v6/latest/${from}`);
+            const data = await response.json();
+            
+            if(data.result === "success") {
+                const rate = data.rates[to];
+                const total = (amount * rate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                rateText.innerText = `1 ${from} = ${rate.toFixed(4)} ${to}`;
+                resultText.innerText = `${total} ${to}`;
+            } else {
+                rateText.innerText = "Error loading data.";
+            }
+        } catch (error) {
+            rateText.innerText = "Connection error.";
+            console.error(error);
+        }
+    }
+
+    // Event Listeners
+    convertBtn.addEventListener('click', getExchangeRate);
+
+    swapBtn.addEventListener('click', () => {
+        const temp = fromSelect.value;
+        fromSelect.value = toSelect.value;
+        toSelect.value = temp;
+        getExchangeRate();
+    });
+
+    // Auto-update when currency changes
+    [fromSelect, toSelect].forEach(select => {
+        select.addEventListener('change', getExchangeRate);
+    });
+
+    // Start
+    init();
+</script>
+
+</body>
+</html>
